@@ -61,14 +61,14 @@ export function startJob(files: File[], count: number, onUpdate: (s: JobState) =
   };
   let resolveRange: ((r: { from: number; to: number }) => void) | null = null;
 
-  const sceneFor = async (deck: Deck, card: Card, index: number): Promise<Scene> => {
+  const sceneFor = async (deck: Deck, card: Card, index: number, onStarted?: () => void): Promise<Scene> => {
     const body: SceneRequest = {
       concept: card.concept,
       deck: { title: deck.title, subject: deck.subject, terms: deck.cards.map((c) => c.concept.term) },
       index,
       total: deck.cards.length,
     };
-    return postStream<Scene>("/api/scene", body, { signal: ctrl.signal });
+    return postStream<Scene>("/api/scene", body, { signal: ctrl.signal, onStatus: () => onStarted?.() });
   };
 
   const updateCard = (deck: Deck, id: string, patch: Partial<Card>) => {
@@ -134,18 +134,28 @@ export function startJob(files: File[], count: number, onUpdate: (s: JobState) =
       message: `모션 만드는 중 0 / ${deck.cards.length}`,
     });
 
-    // 4) scenes, a few at a time (cards appear in the feed as soon as they are ready)
+    // 4) scenes, a few at a time (cards appear in the feed as soon as they are ready).
+    // The first request goes alone; the others wait until it starts streaming so they
+    // read the system-prompt cache it just wrote (cheaper, and easier on rate limits).
     let next = 0;
-    const worker = async () => {
+    let warmed: () => void = () => {};
+    const warm = new Promise<void>((resolve) => {
+      warmed = resolve;
+      setTimeout(resolve, 25_000);
+    });
+    const worker = async (w: number) => {
+      if (w > 0) await warm;
       while (next < deck.cards.length && !ctrl.signal.aborted) {
         const i = next++;
         const card = deck.cards[i];
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const scene = await sceneFor(deck, card, i);
+            const scene = await sceneFor(deck, card, i, warmed);
+            warmed();
             updateCard(deck, card.id, { scene, status: "ready", error: undefined });
             break;
           } catch (e) {
+            warmed();
             if ((e as Error).name === "AbortError") return;
             const code = e instanceof ApiError ? e.code : "";
             if (attempt === 1 || code === "NO_KEY" || code === "AUTH" || code === "CREDIT") {
@@ -157,7 +167,7 @@ export function startJob(files: File[], count: number, onUpdate: (s: JobState) =
         }
       }
     };
-    await Promise.all(Array.from({ length: Math.min(SCENE_CONCURRENCY, deck.cards.length) }, worker));
+    await Promise.all(Array.from({ length: Math.min(SCENE_CONCURRENCY, deck.cards.length) }, (_, w) => worker(w)));
     const ready = deck.cards.filter((c) => c.status === "ready").length;
     if (ready === 0) {
       const firstErr = deck.cards.find((c) => c.error)?.error;

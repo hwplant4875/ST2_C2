@@ -97,7 +97,7 @@ export default function SceneCard({ scene, mode, compHeight, speed, sound, capti
           component={ConceptScene}
           compositionWidth={W}
           compositionHeight={compHeight}
-          frameToDisplay={Math.min(c.total - 1, 8)}
+          frameToDisplay={Math.min(c.total - 1, 18)}
           durationInFrames={c.total}
           fps={FPS}
           inputProps={inputProps}

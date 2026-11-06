@@ -314,7 +314,10 @@ export default function Feed({ deck, generating, settings, onSettings, onBack, o
             {generating ? " · 만드는 중" : ""}
           </span>
         </div>
-        <div className="no-scrollbar pointer-events-auto mt-1.5 flex gap-1.5 overflow-x-auto px-3 pb-1">
+        <div
+          className="no-scrollbar pointer-events-auto mt-1.5 flex gap-1.5 overflow-x-auto pb-1 pl-3 pr-10"
+          style={{ maskImage: "linear-gradient(90deg,#000 calc(100% - 36px),transparent)", WebkitMaskImage: "linear-gradient(90deg,#000 calc(100% - 36px),transparent)" }}
+        >
           <button type="button" className={chip(settings.quizEvery > 0)} onClick={() => setQuizMenu((v) => !v)} aria-expanded={quizMenu}>
             🧩 {settings.quizEvery > 0 ? `퀴즈 ${settings.quizEvery}장마다` : "퀴즈 끔"} ▾
           </button>

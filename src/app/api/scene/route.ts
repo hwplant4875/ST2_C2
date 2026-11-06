@@ -39,6 +39,7 @@ export async function POST(req: Request) {
 
   return ndjsonResponse(async (send, signal) => {
     if (isMock()) {
+      send({ type: "status", message: "장면 설계 시작" });
       await new Promise((r) => setTimeout(r, 1200 + Math.random() * 1500));
       const scene = SAMPLE_SCENES[concept.term] ?? Object.values(SAMPLE_SCENES)[index % 4];
       send({ type: "done", data: { ...scene } satisfies Scene });
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
       schema: SceneSchema,
       effort: effortFor("scene"),
       maxTokens: 16000,
+      onStart: () => send({ type: "status", message: "장면 설계 시작" }),
       onText: (delta) => {
         chars += delta.length;
         if (chars % 400 < delta.length) send({ type: "status", message: `장면 설계 중 (${chars}자)` });

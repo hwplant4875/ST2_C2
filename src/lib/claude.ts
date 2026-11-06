@@ -64,6 +64,8 @@ export async function streamJSON<S extends z.ZodType>(opts: {
   effort: Effort;
   maxTokens: number;
   onText?: (delta: string) => void;
+  /** Fires once, when the response starts streaming (the prompt cache entry is readable from then on). */
+  onStart?: () => void;
   signal?: AbortSignal;
 }): Promise<{ data: z.infer<S>; usage: Anthropic.Beta.BetaUsage }> {
   const anthropic = getClient();
@@ -80,6 +82,14 @@ export async function streamJSON<S extends z.ZodType>(opts: {
     },
     { signal: opts.signal },
   );
+  if (opts.onStart) {
+    let started = false;
+    stream.on("streamEvent", () => {
+      if (started) return;
+      started = true;
+      opts.onStart!();
+    });
+  }
   if (opts.onText) stream.on("text", (delta) => opts.onText!(delta));
   const msg = await stream.finalMessage();
 
