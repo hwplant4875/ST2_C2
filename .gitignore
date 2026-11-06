@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.vercel
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+public/pdfjs
+.DS_Store
