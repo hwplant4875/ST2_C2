@@ -16,6 +16,11 @@ import {
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const num = (v: unknown, fallback = 0) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+/** Keep the field only if it really holds an emoji (models sometimes put words there). */
+const emojiOnly = (v: unknown) => {
+  const s = str(v, 16);
+  return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(s) ? s : "";
+};
 const oneOf = <T extends readonly string[]>(list: T, v: unknown, fallback: T[number]): T[number] =>
   typeof v === "string" && (list as readonly string[]).includes(v) ? (v as T[number]) : fallback;
 
@@ -97,7 +102,7 @@ export function normalizeScene(raw: Partial<Scene>, fallbackTerm = ""): Scene {
     actors.push({
       id,
       type,
-      emoji: str(a.emoji, 16),
+      emoji: emojiOnly(a.emoji),
       label: str(a.label, type === "text" || type === "pill" ? 40 : 24),
       x: clamp(num(a.x, 50), 0, 100),
       y: clamp(num(a.y, 50), 0, 100),
@@ -158,7 +163,7 @@ export function normalizeScene(raw: Partial<Scene>, fallbackTerm = ""): Scene {
       x: clamp(num(b.x, 50), 0, 100),
       y: clamp(num(b.y, 50), 0, 100),
       text: str(b.text, 24),
-      emoji: str(b.emoji, 16),
+      emoji: emojiOnly(b.emoji),
       value: num(b.value, 0),
       style: oneOf(STYLES, b.style, ""),
       d,

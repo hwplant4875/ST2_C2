@@ -86,7 +86,15 @@ export async function POST(req: Request) {
       signal,
     });
     const outline = data as Outline;
-    const concepts = (outline.concepts ?? []).filter((c) => c?.term?.trim()).slice(0, count);
+    const seenTerms = new Set<string>();
+    const concepts = (Array.isArray(outline.concepts) ? outline.concepts : [])
+      .filter((c) => {
+        const key = typeof c?.term === "string" ? c.term.trim().toLowerCase() : "";
+        if (!key || seenTerms.has(key)) return false;
+        seenTerms.add(key);
+        return true;
+      })
+      .slice(0, count);
     if (concepts.length === 0) throw new AppError("자료에서 학습할 개념을 찾지 못했어요. 다른 자료로 시도해 주세요.", "NO_CONCEPTS", 422);
     send({
       type: "done",
